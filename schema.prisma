@@ -1,0 +1,77 @@
+// Prisma schema — CBT Practice
+// Run `npx prisma migrate dev --name init` after placing this at /prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  INSTRUCTOR
+}
+
+enum Tier {
+  TRAINEE
+  ASSOCIATE
+  CERTIFIED
+}
+
+model User {
+  id            String           @id @default(cuid())
+  email         String           @unique
+  name          String?
+  role          Role             @default(STUDENT)
+  tier          Tier             @default(TRAINEE)
+  createdAt     DateTime         @default(now())
+  attempts      Attempt[]
+  checkins      CheckInResponse[]
+}
+
+model Case {
+  id            String     @id @default(cuid())
+  name          String     // e.g. "Alex"
+  label         String     // e.g. "Week 4 — Social phobia, first session"
+  brief         String     // shown to students
+  systemPrompt  String     // hidden persona instructions, server-only use
+  week          Int?
+  active        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  attempts      Attempt[]
+}
+
+model Attempt {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  caseId           String
+  case             Case     @relation(fields: [caseId], references: [id])
+  transcript       Json     // [{ role: "you" | "client", text: string }]
+  scores           Json     // { agenda: {score,note}, guided: {...}, technique: {...}, homework: {...} }
+  overallFeedback  String?
+  createdAt        DateTime @default(now())
+}
+
+model WeeklyCheckIn {
+  id          String             @id @default(cuid())
+  week        Int
+  question    String
+  rubricNote  String?
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  responses   CheckInResponse[]
+}
+
+model CheckInResponse {
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  checkinId   String
+  checkin     WeeklyCheckIn  @relation(fields: [checkinId], references: [id])
+  response    String
+  createdAt   DateTime       @default(now())
+}
